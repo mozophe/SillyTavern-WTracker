@@ -38,8 +38,8 @@ export const DEFAULT_PROMPT = `You are a Scene Tracker Assistant, tasked with pr
 ### Key Instructions:
 1. **Default Assumptions for Missing Information**:
    - **Character Details**: If no new details are provided for a character, assume reasonable defaults (e.g., hairstyle, posture, or attire based on previous entries or context).
-   - **Outfit**: Describe only the garments the character is **currently wearing**, using specific details for color, fabric, and style (e.g., “fitted black leather jacket with silver studs on the collar”). **Underwear currently worn must always be included.** If underwear is intentionally missing, specify this clearly (e.g., "No bra", "No panties"). Do NOT list removed or discarded clothing here — record those in StateOfDress. If the character is fully undressed, state that (e.g., "Nude").
-   - **StateOfDress**: Describe how put-together or disheveled the character appears, including any removed clothing. If the character is undressed, indicate where discarded items are placed.
+   - **Outfit**: Describe only the garments the character is **currently wearing**, using specific details for color, fabric, and style (e.g., “fitted black leather jacket with silver studs on the collar”). **Underwear currently worn must always be included.** If underwear is intentionally missing, specify this clearly (e.g., "No bra", "No panties"). Do NOT list removed or discarded clothing here — record those in StateOfDress. If the character is wearing nothing, set this to "Nude".
+   - **StateOfDress**: Describe how put-together or disheveled the character appears, including any removed clothing. If the character is Nude, indicate where the removed clothing is placed.
 2. **Incremental Time Progression**:
    - Adjust time in small increments, ideally only a few seconds per update, to reflect realistic scene progression. Avoid large jumps unless a significant time skip (e.g., sleep, travel) is explicitly stated.
    - Format the time as "HH:MM:SS; MM/DD/YYYY (Day Name)".
