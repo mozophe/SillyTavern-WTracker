@@ -284,10 +284,13 @@ async function generateTracker(id: number) {
       const format = settings.promptEngineeringMode as 'json' | 'xml';
       const promptTemplate = format === 'json' ? settings.promptJson : settings.promptXml;
       const exampleResponse = schemaToExample(chatJsonValue, format);
-      const finalPrompt = Handlebars.compile(promptTemplate, { noEscape: true, strict: true })({
+      const formatPrompt = Handlebars.compile(promptTemplate, { noEscape: true, strict: true })({
         schema: JSON.stringify(chatJsonValue, null, 2),
         example_response: exampleResponse,
       });
+      // Include the descriptive scene rules (settings.prompt) alongside the format wrapper;
+      // NATIVE mode gets them via json_schema, json/xml modes only had field descriptions before.
+      const finalPrompt = `${settings.prompt}\n\n${formatPrompt}`;
       messages.push({ content: finalPrompt, role: promptRole });
       const rest = await makeRequest(messages);
       if (!rest?.content) throw new Error('No response content received.');
