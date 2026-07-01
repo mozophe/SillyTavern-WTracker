@@ -157,11 +157,11 @@ export const DEFAULT_SCHEMA_VALUE: object = {
           },
           outfit: {
             type: 'string',
-            description: 'Currently worn garments only (including underwear); removed/discarded items belong in stateOfDress, not here',
+            description: 'Only garments physically worn on the body right now (including underwear). Exclude anything removed, discarded, held, or carried - those go in stateOfDress. If nothing is worn, use "Nude".',
           },
           stateOfDress: {
             type: 'string',
-            description: 'How put-together/disheveled character appears',
+            description: 'How put-together/disheveled the character appears, plus the location/state of any clothing not currently worn (removed, discarded, held, or carried).',
           },
           postureAndInteraction: {
             type: 'string',
