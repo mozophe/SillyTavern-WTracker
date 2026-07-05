@@ -300,6 +300,13 @@ async function generateTracker(id: number) {
 
     if (!response || Object.keys(response as any).length === 0) throw new Error('Empty response from WTracker.');
 
+    // Roster completeness check: every name the model listed as present should
+    // also have a full entry in `characters`. Warn on gaps so the user can regenerate.
+    const present = ((response as any).charactersPresent ?? []).map((n: string) => String(n).trim().toLowerCase());
+    const detailed = new Set(((response as any).characters ?? []).map((c: any) => String(c?.name ?? '').trim().toLowerCase()));
+    const missing = [...new Set<string>(present)].filter((n) => n && !detailed.has(n));
+    if (missing.length) st_echo('warning', `WTracker: missing character details for: ${missing.join(', ')}`);
+
     // Tentatively update message and try to render
     message.extra = message.extra || {};
     message.extra[EXTENSION_KEY] = message.extra[EXTENSION_KEY] || {};

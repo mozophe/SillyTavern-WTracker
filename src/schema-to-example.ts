@@ -50,7 +50,9 @@ function generateExample(schema: any): any {
       return obj;
     case 'array':
       if (schema.items) {
-        return [generateExample(schema.items)];
+        // Emit two elements so the example makes it visually obvious this is a
+        // list — one object per person/item, not a single fixed entry.
+        return [generateExample(schema.items), generateExample(schema.items)];
       }
       return [];
     case 'string':
