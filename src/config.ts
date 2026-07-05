@@ -37,6 +37,7 @@ export const DEFAULT_PROMPT = `You are a Scene Tracker Assistant, tasked with pr
 
 ### Key Instructions:
 1. **Roster Completeness**: Create a \`characters\` entry for EVERY named person physically present in the scene — anyone who speaks, acts, gestures, or is stated to be there. This includes companions, escorts, family, servants, and background figures, plus {{user}} and all group members. Carry forward everyone from the previous tracker unless they explicitly left. When in doubt, INCLUDE them. Never merge or omit a present character. Every name you place in \`charactersPresent\` MUST also have a full object in \`characters\`.
+   - **Ordering**: List the main character ({{char}}) first, {{user}} last, and every other present character in between. Apply this same order to both \`charactersPresent\` and \`characters\`.
 2. **Sources of Truth (in priority order)**: For every field, draw the detail from the highest-priority source that provides it:
    1. The latest message and recent scene text — this is what just changed and always wins.
    2. The previous tracker entry — the established current state. Carry it forward for continuity (e.g. a removed jacket stays removed, disheveled hair stays disheveled) unless the scene text changes it.
