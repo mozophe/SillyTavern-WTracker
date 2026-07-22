@@ -232,7 +232,8 @@ async function generateTracker(id: number) {
           ? { start: -1, end: -1 }
           : {
               end: id,
-              start: settings.includeLastXMessages > 0 ? Math.max(0, id - settings.includeLastXMessages) : 0,
+              // Slice is inclusive [start, id], so the target counts as one of the X ("1 means last")
+              start: settings.includeLastXMessages > 0 ? Math.max(0, id - (settings.includeLastXMessages - 1)) : 0,
             },
       presetName: profile?.preset,
       contextName: profile?.context,
