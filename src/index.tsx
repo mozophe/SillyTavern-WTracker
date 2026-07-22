@@ -247,6 +247,18 @@ async function generateTracker(id: number) {
         }
       }
     }
+
+    // Extension prompt injections (Summarize, vectors, author's note) reflect the PRESENT
+    // chat state. buildPrompt injects them unconditionally, so for a non-latest target they
+    // leak future events into the prompt. Strip them for older targets, keep for the latest.
+    const isLatest = id === globalContext.chat.length - 1;
+    const extPrompts = context.extensionPrompts as Record<string, any>;
+    let savedExtPrompts: Record<string, any> | null = null;
+    if (!isLatest && extPrompts) {
+      savedExtPrompts = { ...extPrompts };
+      Object.keys(extPrompts).forEach((key) => delete extPrompts[key]);
+    }
+
     let promptResult;
     try {
       promptResult = await buildPrompt(apiMap?.selected!, {
@@ -257,9 +269,11 @@ async function generateTracker(id: number) {
         instructName: profile?.instruct,
         syspromptName: profile?.sysprompt,
         includeNames: !!selected_group,
+        ignoreAuthorNote: !isLatest,
       });
     } finally {
       unhidden.forEach((m) => (m.is_system = true));
+      if (savedExtPrompts) Object.assign(extPrompts, savedExtPrompts);
     }
     let messages = promptResult.result;
     if (appendTarget) {
