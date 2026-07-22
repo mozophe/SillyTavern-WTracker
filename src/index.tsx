@@ -286,6 +286,11 @@ async function generateTracker(id: number) {
     messages = includeWTrackerMessages(messages, settings);
     // TODO: temporary debug instrumentation — remove after hidden-message investigation
     console.debug('[WTracker debug] target id:', id, 'is_system:', message.is_system, 'windowStart:', windowStart, 'unhidden count:', unhidden.length);
+    console.debug(
+      '[WTracker debug v2] chatLength:', globalContext.chat.length,
+      'isLatest:', isLatest,
+      'strippedExtPrompts:', savedExtPrompts ? Object.keys(savedExtPrompts) : null,
+    );
     console.debug('[WTracker debug] buildPrompt returned', promptResult.result.length, 'messages');
     console.debug(
       '[WTracker debug] final prompt:',
