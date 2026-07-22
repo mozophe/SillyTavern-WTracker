@@ -223,12 +223,17 @@ async function generateTracker(id: number) {
     mainButton?.classList.add('spinning');
     regenerateButton?.classList.add('spinning');
 
+    // Lib bug workaround: buildPrompt treats end=0 as falsy and includes the WHOLE chat.
+    // For message 0, exclude all chat messages ({start:-1,end:-1}) and append it manually below.
     const promptResult = await buildPrompt(apiMap?.selected!, {
       targetCharacterId: characterId,
-      messageIndexesBetween: {
-        end: id,
-        start: settings.includeLastXMessages > 0 ? Math.max(0, id - settings.includeLastXMessages) : 0,
-      },
+      messageIndexesBetween:
+        id === 0
+          ? { start: -1, end: -1 }
+          : {
+              end: id,
+              start: settings.includeLastXMessages > 0 ? Math.max(0, id - settings.includeLastXMessages) : 0,
+            },
       presetName: profile?.preset,
       contextName: profile?.context,
       instructName: profile?.instruct,
@@ -236,6 +241,12 @@ async function generateTracker(id: number) {
       includeNames: !!selected_group,
     });
     let messages = includeWTrackerMessages(promptResult.result, settings);
+    if (id === 0) {
+      messages.push({
+        content: selected_group ? `${message.name}: ${message.mes}` : message.mes,
+        role: message.is_user ? 'user' : 'assistant',
+      });
+    }
     let response: ExtractedData['content'];
 
     const makeRequest = (requestMessages: Message[], overideParams?: any): Promise<ExtractedData | undefined> => {
