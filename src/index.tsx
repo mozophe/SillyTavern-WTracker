@@ -284,18 +284,6 @@ async function generateTracker(id: number) {
       } as Message);
     }
     messages = includeWTrackerMessages(messages, settings);
-    // TODO: temporary debug instrumentation — remove after hidden-message investigation
-    console.debug('[WTracker debug] target id:', id, 'is_system:', message.is_system, 'windowStart:', windowStart, 'unhidden count:', unhidden.length);
-    console.debug(
-      '[WTracker debug v2] chatLength:', globalContext.chat.length,
-      'isLatest:', isLatest,
-      'strippedExtPrompts:', savedExtPrompts ? Object.keys(savedExtPrompts) : null,
-    );
-    console.debug('[WTracker debug] buildPrompt returned', promptResult.result.length, 'messages');
-    console.debug(
-      '[WTracker debug] final prompt:',
-      messages.map((m, i) => `#${i} [${m.role}] ${String(m.content).slice(0, 120).replace(/\n/g, ' ')}`),
-    );
     let response: ExtractedData['content'];
 
     const makeRequest = (requestMessages: Message[], overideParams?: any): Promise<ExtractedData | undefined> => {
