@@ -25,6 +25,7 @@ export interface ExtensionSettings {
   prompt: string;
   includeLastXMessages: number; // 0 means all messages
   includeLastXWTrackerMessages: number; // 0 means none
+  allowHiddenMessages: boolean; // allow generating trackers for hidden (is_system) messages
   promptEngineeringMode: PromptEngineeringMode;
   promptRole: PromptSenderRole;
   promptJson: string;
@@ -283,6 +284,7 @@ export const defaultSettings: ExtensionSettings = {
   prompt: DEFAULT_PROMPT,
   includeLastXMessages: 0,
   includeLastXWTrackerMessages: 1,
+  allowHiddenMessages: false,
   promptEngineeringMode: PromptEngineeringMode.NATIVE,
   promptRole: 'user',
   promptJson: DEFAULT_PROMPT_JSON,

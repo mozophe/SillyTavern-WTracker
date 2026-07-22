@@ -193,6 +193,9 @@ async function generateTracker(id: number) {
 
   const settings = settingsManager.getSettings();
   if (!settings.profileId) return st_echo('error', 'Please select a connection profile in settings.');
+  if (message.is_system && !settings.allowHiddenMessages) {
+    return st_echo('warning', 'Message is hidden. Enable "Allow Hidden Messages" in WTracker settings to generate its tracker.');
+  }
   const context = SillyTavern.getContext();
   const chatMetadata = context.chatMetadata;
   const { extensionSettings, CONNECT_API_MAP, saveChat } = globalContext;
@@ -223,31 +226,50 @@ async function generateTracker(id: number) {
     mainButton?.classList.add('spinning');
     regenerateButton?.classList.add('spinning');
 
-    // Lib bug workaround: buildPrompt treats end=0 as falsy and includes the WHOLE chat.
-    // For message 0, exclude all chat messages ({start:-1,end:-1}) and append it manually below.
-    const promptResult = await buildPrompt(apiMap?.selected!, {
-      targetCharacterId: characterId,
-      messageIndexesBetween:
-        id === 0
-          ? { start: -1, end: -1 }
-          : {
-              end: id,
-              // Slice is inclusive [start, id], so the target counts as one of the X ("1 means last")
-              start: settings.includeLastXMessages > 0 ? Math.max(0, id - (settings.includeLastXMessages - 1)) : 0,
-            },
-      presetName: profile?.preset,
-      contextName: profile?.context,
-      instructName: profile?.instruct,
-      syspromptName: profile?.sysprompt,
-      includeNames: !!selected_group,
-    });
-    let messages = includeWTrackerMessages(promptResult.result, settings);
-    if (id === 0) {
+    // Lib bug workaround: buildPrompt treats end=0 as falsy and would include the WHOLE chat,
+    // so for message 0 we exclude all chat messages ({start:-1,end:-1}) and append it manually below.
+    const appendTarget = id === 0;
+    // Slice is inclusive [start, id], so the target counts as one of the X ("1 means last")
+    const windowStart = settings.includeLastXMessages > 0 ? Math.max(0, id - (settings.includeLastXMessages - 1)) : 0;
+
+    // buildPrompt filters out hidden (is_system) messages with no opt-out. When allowed,
+    // temporarily unhide the window (target included) so they land in the prompt, then restore.
+    // ponytail: brief mutation of live chat during buildPrompt; if ST starts its own
+    // generation in that window the unhidden messages could leak into it — switch to
+    // manual chat assembly if that ever matters.
+    const unhidden: typeof message[] = [];
+    if (settings.allowHiddenMessages && id > 0) {
+      for (let i = windowStart; i <= id; i++) {
+        const m = globalContext.chat[i];
+        if (m?.is_system) {
+          m.is_system = false;
+          unhidden.push(m);
+        }
+      }
+    }
+    let promptResult;
+    try {
+      promptResult = await buildPrompt(apiMap?.selected!, {
+        targetCharacterId: characterId,
+        messageIndexesBetween: id === 0 ? { start: -1, end: -1 } : { end: id, start: windowStart },
+        presetName: profile?.preset,
+        contextName: profile?.context,
+        instructName: profile?.instruct,
+        syspromptName: profile?.sysprompt,
+        includeNames: !!selected_group,
+      });
+    } finally {
+      unhidden.forEach((m) => (m.is_system = true));
+    }
+    let messages = promptResult.result;
+    if (appendTarget) {
+      // Push before tracker injection so its "skip last message" scan still skips the target
       messages.push({
         content: selected_group ? `${message.name}: ${message.mes}` : message.mes,
         role: message.is_user ? 'user' : 'assistant',
-      });
+      } as Message);
     }
+    messages = includeWTrackerMessages(messages, settings);
     let response: ExtractedData['content'];
 
     const makeRequest = (requestMessages: Message[], overideParams?: any): Promise<ExtractedData | undefined> => {

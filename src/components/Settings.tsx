@@ -355,6 +355,23 @@ export const WTrackerSettings: FC = () => {
                 }
               />
             </div>
+            <div className="setting-row">
+              <label
+                className="checkbox_label"
+                title="Allow generating trackers for hidden (system) messages, and include hidden messages within the window as context."
+              >
+                <input
+                  type="checkbox"
+                  checked={settings.allowHiddenMessages}
+                  onChange={(e) =>
+                    updateAndRefresh((s) => {
+                      s.allowHiddenMessages = e.target.checked;
+                    })
+                  }
+                />
+                Allow Hidden Messages
+              </label>
+            </div>
           </div>
         </div>
       </div>
