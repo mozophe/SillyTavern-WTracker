@@ -472,6 +472,18 @@ async function initializeGlobalUI() {
     }
   });
 
+  // Re-render trackers when "Show more messages" injects older messages into the DOM.
+  // Render only — never delete/save here, so intact data can't be lost on a transient render error.
+  globalContext.eventSource.on(EventNames.MORE_MESSAGES_LOADED, () => {
+    globalContext.chat.forEach((_, i) => {
+      try {
+        renderTracker(i);
+      } catch (error) {
+        console.error(`WTracker render failed on message ${i}:`, error);
+      }
+    });
+  });
+
   // Register the global generation interceptor
   (globalThis as any).wtrackerGenerateInterceptor = (chat: ChatMessage[]) => {
     const newChat = includeWTrackerMessages(chat, settingsManager.getSettings());
