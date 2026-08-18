@@ -287,6 +287,10 @@ async function generateTracker(id: number) {
         syspromptName: profile?.sysprompt,
         includeNames: !!selected_group,
         ignoreAuthorNote: !isLatest,
+        // We run world info ourselves below, dry, over our own window. Without this
+        // buildPrompt also scans — with an empty chat, so it finds nothing — and it scans
+        // with isDryRun false, which is the call that touches sticky/cooldown timers.
+        ignoreWorldInfo: true,
       });
     } finally {
       if (savedExtPrompts) Object.assign(extPrompts, savedExtPrompts);
