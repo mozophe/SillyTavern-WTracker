@@ -37,8 +37,9 @@ export const extensionName = 'SillyTavern-WTracker';
 export const DEFAULT_PROMPT = `You are a Scene Tracker Assistant, tasked with providing clear, consistent, and structured updates to a scene tracker for a roleplay. Use the latest message, previous tracker details, and context from recent messages to accurately update the tracker. Your response must ensuring that each field is filled and complete. If specific information is not provided, make reasonable assumptions based on prior descriptions, logical inferences, or default character details.
 
 ### Key Instructions:
-1. **Roster Completeness**: Create a \`characters\` entry for EVERY named person physically present in the scene — anyone who speaks, acts, gestures, or is stated to be there. This includes companions, escorts, family, servants, and background figures, plus {{user}} and all group members. Carry forward everyone from the previous tracker unless they explicitly left. When in doubt, INCLUDE them. Never merge or omit a present character. Every name you place in \`charactersPresent\` MUST also have a full object in \`characters\`.
-   - **Ordering**: List the main character ({{char}}) first, {{user}} last, and every other present character in between. Apply this same order to both \`charactersPresent\` and \`characters\`.
+1. **Roster Completeness**: Create a \`characters\` entry for EVERY named person physically present in the scene — anyone who speaks, acts, gestures, or is stated to be there. This includes companions, escorts, family, servants, background figures, and all group members. Carry forward everyone from the previous tracker unless they explicitly left. When in doubt about a character who was already in the scene, INCLUDE them. Never merge or omit a present character. Every name you place in \`charactersPresent\` MUST also have a full object in \`characters\`.
+   - **{{user}} is not automatic**: Include {{user}} ONLY when he is physically in the scene — present in the room/space where the action happens. Omit him entirely when the scene follows other characters elsewhere, when he has left, or when he is merely being talked about, remembered, or phoned. Receiving a {{user}} persona description does not mean he is present. Downstream consumers treat this roster as authoritative for who is physically there.
+   - **Ordering**: List the main character ({{char}}) first, {{user}} last (when present), and every other present character in between. Apply this same order to both \`charactersPresent\` and \`characters\`.
 2. **Sources of Truth (in priority order)**: For every field, draw the detail from the highest-priority source that provides it:
    1. The latest message and recent scene text — this is what just changed and always wins.
    2. The previous tracker entry — the established current state. Carry it forward for continuity (e.g. a removed jacket stays removed, disheveled hair stays disheveled) unless the scene text changes it.
@@ -263,6 +264,238 @@ export const DEFAULT_SCHEMA_HTML = `<div class="wtracker_default_mes_template">
 </div>
 <hr>`;
 
+// Companion schema for ST-ComfyUI-Imagine. Imagine reads `message.extra.WTracker.value`
+// verbatim as [TRACKER STATE] and is under standing orders to OMIT anything the tracker
+// does not state (ethnicity/skin tone for characters whose name doesn't match the loaded
+// card, age, etc). Imagine is stateless per image, so any detail it invents re-rolls on
+// every generation. This schema pins those details here, where they persist and carry
+// forward, which is what keeps a character looking like herself across a whole chat.
+export const IMAGINE_SCHEMA_VALUE: object = {
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  title: 'SceneTracker',
+  description: 'Scene tracker tuned to drive image generation: every field must be concrete and visually usable',
+  type: 'object',
+  properties: {
+    time: {
+      type: 'string',
+      description: 'Format: HH:MM:SS; MM/DD/YYYY (Day Name)',
+    },
+    location: {
+      type: 'string',
+      description: 'Specific scene location with increasing specificity',
+    },
+    setting: {
+      type: 'string',
+      description:
+        'Visible surroundings: the room or space, its furniture and surfaces, notable props and objects in view, and the background. Carry forward unchanged while the scene stays in one place so backgrounds stay consistent between images; rewrite only when the characters move somewhere new.',
+    },
+    weather: {
+      type: 'string',
+      description: 'Current weather conditions and temperature',
+    },
+    topics: {
+      type: 'object',
+      properties: {
+        primaryTopic: {
+          type: 'string',
+          description: '1-2 word main topic of interaction',
+        },
+        emotionalTone: {
+          type: 'string',
+          description: 'Dominant emotional tone of scene',
+        },
+        interactionTheme: {
+          type: 'string',
+          description: 'Type of character interaction',
+        },
+      },
+      required: ['primaryTopic', 'emotionalTone', 'interactionTheme'],
+    },
+    charactersPresent: {
+      type: 'array',
+      items: {
+        type: 'string',
+        description: 'Character name',
+      },
+      description:
+        'Names of the characters PHYSICALLY PRESENT in the space where the action is happening. Include {{user}} ONLY when he is bodily in the scene - omit him when the scene follows other characters elsewhere, when he has left, or when he is only being talked about, remembered, or phoned. This roster is treated as authoritative for who is physically there, so a name listed here that is not actually present will place that person in the frame. Order: {{char}} first, {{user}} last when present, everyone else in between.',
+    },
+    characters: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Character name',
+          },
+          age: {
+            type: 'string',
+            description:
+              'Age in years as digits (e.g. "27"). Take it from the character description when stated, otherwise infer from context cues (occupation, life stage, family role) and commit. Every character is an adult: never below 18. Once set, carry forward unchanged.',
+          },
+          appearance: {
+            type: 'string',
+            description:
+              'Permanent physical identity that does not change from scene to scene: ethnicity/nationality, skin tone, body build and proportions, height, and eye color. Required for EVERY character including side characters who have no character card - if their description is silent, choose values that fit the setting and commit. Set once and carry forward verbatim; never re-roll or reword this between updates.',
+          },
+          hair: {
+            type: 'string',
+            description: 'Hair color, length, and current style and condition',
+          },
+          makeup: {
+            type: 'string',
+            description: "Makeup description or 'None'",
+          },
+          expression: {
+            type: 'string',
+            description:
+              'Current facial expression and where the eyes are looking, e.g. "flushed, lips parted, eyes locked on {{user}}" or "jaw tight, gaze fixed on the door".',
+          },
+          outfit: {
+            type: 'string',
+            description:
+              'Only garments physically worn on the body right now, including underwear, shoes, and socks. Name color and fabric for each. Exclude anything removed, discarded, held, or carried - those go in stateOfDress. If nothing is worn, use "Nude".',
+          },
+          stateOfDress: {
+            type: 'string',
+            description:
+              'How put-together/disheveled the character appears, plus the location/state of any clothing not currently worn (removed, discarded, held, or carried).',
+          },
+          accessories: {
+            type: 'string',
+            description:
+              "Worn items that are not clothing: glasses, jewelry, watch, hair ties, plus permanent marks such as tattoos, piercings, and scars with their placement. 'None' if there are none. Permanent marks carry forward unchanged.",
+          },
+          bodyState: {
+            type: 'string',
+            description:
+              "Visible condition of skin and body right now: sweat, flush, goosebumps, tears, smeared makeup, wetness, dirt, bruises, marks. 'None' if unremarkable.",
+          },
+          postureAndInteraction: {
+            type: 'string',
+            description:
+              'Current posture, the surface or object supporting the body, which direction the character faces, and every point of physical contact with others. Always name the support explicitly, e.g. "kneeling upright on the bed, facing {{user}}, both hands flat on his chest" or "standing on the tiled floor, back against the wall, arms crossed". During sexual contact this field MUST name the position outright (cowgirl, reverse cowgirl, doggy style, missionary, spooning, oral, etc.) and state where the penis is - penetrating which orifice and how deep, held, stroked, or resting against a named body part - rather than describing the act only through verbs.',
+          },
+        },
+        required: [
+          'name',
+          'age',
+          'appearance',
+          'hair',
+          'makeup',
+          'expression',
+          'outfit',
+          'stateOfDress',
+          'accessories',
+          'bodyState',
+          'postureAndInteraction',
+        ],
+      },
+      description: 'Array of character objects',
+    },
+  },
+  required: ['time', 'location', 'setting', 'weather', 'topics', 'charactersPresent', 'characters'],
+};
+
+export const IMAGINE_SCHEMA_HTML = `<div class="wtracker_default_mes_template">
+    <!-- Main Scene Information -->
+    <table>
+        <tbody>
+            <tr>
+                <td>Time:</td>
+                <td>{{data.time}}</td>
+            </tr>
+            <tr>
+                <td>Location:</td>
+                <td>{{data.location}}</td>
+            </tr>
+            <tr>
+                <td>Weather:</td>
+                <td>{{data.weather}}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Collapsible Detailed Tracker -->
+    <details>
+        <summary><span>Tracker Details</span></summary>
+        <table>
+            <tbody>
+                <tr>
+                    <td>Setting:</td>
+                    <td>{{data.setting}}</td>
+                </tr>
+                <tr>
+                    <td>Topics:</td>
+                    <td>
+                        {{data.topics.primaryTopic}}; {{data.topics.emotionalTone}}; {{data.topics.interactionTheme}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Present:</td>
+                    <td>
+                        {{join data.charactersPresent ', '}}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Character Details Section -->
+        <div class="mes_wtracker_characters">
+            {{#each data.characters as |character|}}
+            <hr>
+            <strong>{{character.name}}:</strong><br>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>Age:</td>
+                        <td>{{character.age}}</td>
+                    </tr>
+                    <tr>
+                        <td>Appearance:</td>
+                        <td>{{character.appearance}}</td>
+                    </tr>
+                    <tr>
+                        <td>Hair:</td>
+                        <td>{{character.hair}}</td>
+                    </tr>
+                    <tr>
+                        <td>Makeup:</td>
+                        <td>{{character.makeup}}</td>
+                    </tr>
+                    <tr>
+                        <td>Expression:</td>
+                        <td>{{character.expression}}</td>
+                    </tr>
+                    <tr>
+                        <td>Outfit:</td>
+                        <td>{{character.outfit}}</td>
+                    </tr>
+                    <tr>
+                        <td>State:</td>
+                        <td>{{character.stateOfDress}}</td>
+                    </tr>
+                    <tr>
+                        <td>Accessories:</td>
+                        <td>{{character.accessories}}</td>
+                    </tr>
+                    <tr>
+                        <td>Body:</td>
+                        <td>{{character.bodyState}}</td>
+                    </tr>
+                    <tr>
+                        <td>Position:</td>
+                        <td>{{character.postureAndInteraction}}</td>
+                    </tr>
+                </tbody>
+            </table>
+            {{/each}}
+        </div>
+    </details>
+</div>
+<hr>`;
+
 const VERSION = '0.1.0';
 const FORMAT_VERSION = 'F_1.0';
 export const EXTENSION_KEY = 'WTracker';
@@ -279,6 +512,11 @@ export const defaultSettings: ExtensionSettings = {
       name: 'Default',
       value: DEFAULT_SCHEMA_VALUE,
       html: DEFAULT_SCHEMA_HTML,
+    },
+    imagine: {
+      name: 'Imagine',
+      value: IMAGINE_SCHEMA_VALUE,
+      html: IMAGINE_SCHEMA_HTML,
     },
   },
   prompt: DEFAULT_PROMPT,

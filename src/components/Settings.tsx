@@ -119,7 +119,10 @@ export const WTrackerSettings: FC = () => {
     );
     if (!confirm) return;
 
+    // Restore the built-in shipped with THIS preset key, not always the default one -
+    // otherwise restoring while on "imagine" silently swaps in the default schema.
     const currentPresetKey = settings.schemaPreset;
+    const builtIn = defaultSettings.schemaPresets[currentPresetKey] ?? defaultSettings.schemaPresets['default'];
     updateAndRefresh((s) => {
       const preset = s.schemaPresets[currentPresetKey];
       if (preset) {
@@ -127,13 +130,13 @@ export const WTrackerSettings: FC = () => {
           ...s.schemaPresets,
           [currentPresetKey]: {
             ...preset,
-            value: DEFAULT_SCHEMA_VALUE,
-            html: DEFAULT_SCHEMA_HTML,
+            value: builtIn.value,
+            html: builtIn.html,
           },
         };
       }
     });
-    setSchemaText(JSON.stringify(DEFAULT_SCHEMA_VALUE, null, 2));
+    setSchemaText(JSON.stringify(builtIn.value, null, 2));
   };
 
   return (
