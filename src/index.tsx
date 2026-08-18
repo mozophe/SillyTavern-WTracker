@@ -35,6 +35,21 @@ if (!Handlebars.helpers['join']) {
 
 // --- Core Logic Functions (ported from original index.ts) ---
 
+/**
+ * The button spinners live in ST's hidden `.extraMesButtons` menu, so auto-generation
+ * looks like nothing is happening. Show an inline bar on the message instead.
+ */
+function setTrackerPending(messageId: number, pending: boolean) {
+  const messageBlock = document.querySelector(`.mes[mesid="${messageId}"]`);
+  messageBlock?.querySelector('.wtracker-pending')?.remove();
+  if (!pending || !messageBlock) return;
+
+  const bar = document.createElement('div');
+  bar.className = 'wtracker-pending';
+  bar.innerHTML = `<span class="fa-solid fa-truck-moving"></span><span>Generating tracker… (click the WTracker button to cancel)</span>`;
+  messageBlock.querySelector('.mes_text')?.before(bar);
+}
+
 function renderTracker(messageId: number) {
   const message = globalContext.chat[messageId];
   const messageBlock = document.querySelector(`.mes[mesid="${messageId}"]`);
@@ -225,6 +240,7 @@ async function generateTracker(id: number) {
   try {
     mainButton?.classList.add('spinning');
     regenerateButton?.classList.add('spinning');
+    setTrackerPending(id, true);
 
     // Lib bug workaround: buildPrompt treats end=0 as falsy and would include the WHOLE chat,
     // so for message 0 we exclude all chat messages ({start:-1,end:-1}) and append it manually below.
@@ -395,6 +411,7 @@ async function generateTracker(id: number) {
   } finally {
     mainButton?.classList.remove('spinning');
     regenerateButton?.classList.remove('spinning');
+    setTrackerPending(id, false);
   }
 }
 

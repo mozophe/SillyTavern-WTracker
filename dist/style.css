@@ -20,6 +20,17 @@
   animation: spin 2s linear infinite;
 }
 
+.wtracker-pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: smaller;
+  opacity: 0.6;
+}
+.wtracker-pending .fa-solid {
+  animation: spin 2s linear infinite;
+}
+
 .mes_wtracker {
   position: relative;
 }
