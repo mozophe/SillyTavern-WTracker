@@ -444,9 +444,23 @@ async function initializeGlobalUI() {
 
   // Set up event listeners for auto-mode and chat changes
   const settings = settingsManager.getSettings();
+
+  // ST keeps the partial message when streaming is stopped and still emits
+  // CHARACTER_MESSAGE_RENDERED, so the tracker would run on an aborted reply.
+  // GENERATION_STOPPED is emitted before the stream teardown finishes, so this
+  // flag is always set by the time the render event lands.
+  let generationStopped = false;
+  globalContext.eventSource.on(EventNames.GENERATION_STARTED, () => {
+    generationStopped = false;
+  });
+  globalContext.eventSource.on(EventNames.GENERATION_STOPPED, () => {
+    generationStopped = true;
+  });
+
   globalContext.eventSource.on(
     EventNames.CHARACTER_MESSAGE_RENDERED,
-    (messageId: number) => incomingTypes.includes(settings.autoMode) && generateTracker(messageId),
+    (messageId: number) =>
+      !generationStopped && incomingTypes.includes(settings.autoMode) && generateTracker(messageId),
   );
   globalContext.eventSource.on(
     EventNames.USER_MESSAGE_RENDERED,
