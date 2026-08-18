@@ -60,7 +60,7 @@ export const DEFAULT_PROMPT = `You are a Scene Tracker Assistant, tasked with pr
 4. **Incremental Time Progression**:
    - Adjust time in small increments, ideally only a few seconds per update, to reflect realistic scene progression. Avoid large jumps unless a significant time skip (e.g., sleep, travel) is explicitly stated.
    - When the message itself narrates a skip (a shower, a meal, an evening passing), advance the clock to match the end of what actually happened — the snapshot rule above wins over small increments.
-   - Format the time as "HH:MM:SS; MM/DD/YYYY (Day Name)".
+   - Format the time as "HH:MM:SS; DD/MM/YYYY (Day Name)" — 24-hour clock, day before month.
 5. **Context-Appropriate Times**:
    - Ensure that the time aligns with the setting. For example, if the scene takes place in a public venue (e.g., a mall), choose an appropriate time within standard operating hours.
 6. **Location Format**: Avoid unintended reuse of specific locations from previous examples or responses. Provide specific, relevant, and detailed locations based on the context, using the format:
@@ -123,7 +123,7 @@ export const DEFAULT_SCHEMA_VALUE: object = {
   properties: {
     time: {
       type: 'string',
-      description: 'Format: HH:MM:SS; MM/DD/YYYY (Day Name)',
+      description: 'Format: HH:MM:SS; DD/MM/YYYY (Day Name). 24-hour clock, day before month.',
     },
     location: {
       type: 'string',
@@ -131,7 +131,7 @@ export const DEFAULT_SCHEMA_VALUE: object = {
     },
     weather: {
       type: 'string',
-      description: 'Current weather conditions and temperature',
+      description: 'Current weather conditions and temperature in degrees Celsius (e.g. "Overcast and damp, 12°C")',
     },
     topics: {
       type: 'object',
@@ -288,7 +288,7 @@ export const IMAGINE_SCHEMA_VALUE: object = {
   properties: {
     time: {
       type: 'string',
-      description: 'Format: HH:MM:SS; MM/DD/YYYY (Day Name)',
+      description: 'Format: HH:MM:SS; DD/MM/YYYY (Day Name). 24-hour clock, day before month.',
     },
     location: {
       type: 'string',
@@ -302,7 +302,7 @@ export const IMAGINE_SCHEMA_VALUE: object = {
     },
     weather: {
       type: 'string',
-      description: 'Current weather conditions and temperature',
+      description: 'Current weather conditions and temperature in degrees Celsius (e.g. "Overcast and damp, 12°C")',
     },
     topics: {
       type: 'object',
