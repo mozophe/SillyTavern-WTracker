@@ -8,6 +8,7 @@ import { characters, name1, selected_group, st_echo } from 'sillytavern-utils-li
 import { AutoModeOptions } from 'sillytavern-utils-lib/types/translate';
 import { ExtensionSettings, PromptEngineeringMode, EXTENSION_KEY, extensionName } from './config.js';
 import { parseResponse } from './parser.js';
+import { buildChatWindow } from './chat-window.js';
 import { schemaToExample } from './schema-to-example.js';
 import * as Handlebars from 'handlebars';
 import { POPUP_RESULT, POPUP_TYPE } from 'sillytavern-utils-lib/types/popup';
@@ -242,26 +243,19 @@ async function generateTracker(id: number) {
     regenerateButton?.classList.add('spinning');
     setTrackerPending(id, true);
 
-    // Lib bug workaround: buildPrompt treats end=0 as falsy and would include the WHOLE chat,
-    // so for message 0 we exclude all chat messages ({start:-1,end:-1}) and append it manually below.
-    const appendTarget = id === 0;
     // Slice is inclusive [start, id], so the target counts as one of the X ("1 means last")
     const windowStart = settings.includeLastXMessages > 0 ? Math.max(0, id - (settings.includeLastXMessages - 1)) : 0;
 
-    // buildPrompt filters out hidden (is_system) messages with no opt-out. When allowed,
-    // temporarily unhide the window (target included) so they land in the prompt, then restore.
-    // ponytail: brief mutation of live chat during buildPrompt; if ST starts its own
-    // generation in that window the unhidden messages could leak into it — switch to
-    // manual chat assembly if that ever matters.
-    const unhidden: typeof message[] = [];
-    if (settings.allowHiddenMessages && id > 0) {
-      for (let i = windowStart; i <= id; i++) {
-        const m = globalContext.chat[i];
-        if (m?.is_system) {
-          m.is_system = false;
-          unhidden.push(m);
-        }
-      }
+    // We assemble the chat window ourselves instead of letting buildPrompt slice it — see
+    // chat-window.ts for why (it used to require mutating chat[i].is_system across an await).
+    // Owning the loop is also the only way to express "skip attachments": buildPrompt takes
+    // a range, never a predicate.
+    const windowMessages = buildChatWindow(globalContext.chat, windowStart, id, {
+      includeHidden: settings.allowHiddenMessages,
+      includeNames: !!selected_group,
+    });
+    if (windowMessages.length === 0) {
+      return st_echo('warning', 'Nothing to track: the window holds only hidden messages or attachments.');
     }
 
     // Extension prompt injections (Summarize, vectors, author's note) reflect the PRESENT
@@ -279,7 +273,14 @@ async function generateTracker(id: number) {
     try {
       promptResult = await buildPrompt(apiMap?.selected!, {
         targetCharacterId: characterId,
-        messageIndexesBetween: id === 0 ? { start: -1, end: -1 } : { end: id, start: windowStart },
+        // We supply the chat ourselves (windowMessages, pushed below), so buildPrompt only
+        // assembles the surrounding prompt. {start:-1,end:-1} is the lib's own escape
+        // hatch for "no chat messages" — it special-cases start===-1 && end+1===0. That is
+        // an internal detail, so it needs re-checking on every bump; hence the exact version
+        // pin in package.json. Verified still present at 1.0.68, which fixed the underlying
+        // end===0 falsy bug (fddf0a7) but kept this branch. The is_system filter it forces
+        // us around is also unchanged there — there is still no opt-out upstream.
+        messageIndexesBetween: { start: -1, end: -1 },
         presetName: profile?.preset,
         contextName: profile?.context,
         instructName: profile?.instruct,
@@ -288,17 +289,37 @@ async function generateTracker(id: number) {
         ignoreAuthorNote: !isLatest,
       });
     } finally {
-      unhidden.forEach((m) => (m.is_system = true));
       if (savedExtPrompts) Object.assign(extPrompts, savedExtPrompts);
     }
     let messages = promptResult.result;
-    if (appendTarget) {
-      // Push before tracker injection so its "skip last message" scan still skips the target
-      messages.push({
-        content: selected_group ? `${message.name}: ${message.mes}` : message.mes,
-        role: message.is_user ? 'user' : 'assistant',
-      } as Message);
+
+    // buildPrompt normally feeds its chat slice to world info; with an empty range it has
+    // nothing to scan, so we activate WI from our own window instead. isDryRun: true is
+    // deliberate and better than what buildPrompt does — it returns the same strings while
+    // leaving the main chat's sticky/cooldown timers alone, which buildPrompt (isDryRun:
+    // false) advances on every tracker generation.
+    try {
+      // maxContext is on getContext() at runtime (st-context.js) but missing from the
+      // lib's SillyTavernContext typing. Without a budget WI cannot decide what fits, so
+      // skip rather than pass a bad number.
+      const maxContext = (globalContext as any).maxContext as number | undefined;
+      if (!maxContext) throw new Error('no maxContext available to budget world info');
+      const wi = await globalContext.getWorldInfoPrompt(
+        windowMessages.map((m) => m.content).reverse(),
+        maxContext,
+        true,
+      );
+      if (wi?.worldInfoString) {
+        messages.push({ role: 'system', content: wi.worldInfoString } as unknown as Message);
+      }
+    } catch (wiError) {
+      // World info is enrichment, not a requirement — a tracker without it still works.
+      console.warn('[WTracker] world info lookup failed, continuing without it', wiError);
     }
+
+    // Push before tracker injection so its "skip last message" scan still skips the target,
+    // which is why the window has to stay last in the array.
+    messages.push(...(windowMessages as unknown as Message[]));
     messages = includeWTrackerMessages(messages, settings);
     let response: ExtractedData['content'];
 
