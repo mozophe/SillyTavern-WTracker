@@ -49,16 +49,21 @@ export const DEFAULT_PROMPT = `You are a Scene Tracker Assistant, tasked with pr
    - **Character Details**: State hair, makeup, posture, and attire concretely — e.g. "Short black hair, neatly combed", not "Not described". Prefer details from the character's description/personality; assume defaults only when none are given anywhere.
    - **Outfit**: Describe only the garments the character is **currently wearing**, using specific details for color, fabric, and style (e.g., “fitted black leather jacket with silver studs on the collar”). Use the character's described default attire when the scene does not specify one; only invent a complete outfit when neither the scene nor the character description provides one. **Underwear currently worn must always be included and named as a concrete garment** (e.g., "white cotton briefs", "black lace bra") — never write "underwear (assumed present)" or similar. If underwear is intentionally missing, specify this clearly (e.g., "No bra", "No panties"). Do NOT list removed or discarded clothing here — record those in StateOfDress. If the character is wearing nothing, set this to "Nude".
    - **StateOfDress**: Describe how put-together or disheveled the character appears, including any removed clothing. If the character is Nude, indicate where the removed clothing is placed.
-3. **Incremental Time Progression**:
+3. **Which Moment To Capture**: The tracker is a snapshot of ONE moment: the **latest moment the message narrates as having actually happened**. When a message covers several moments in sequence (she showers, then dresses, then cooks dinner), skip past the earlier ones and describe only the final state — where every character ends up, what they are wearing then, who is in the room by then. Never freeze on a vivid moment from the middle of the message; the next scene continues from the end, so a mid-message snapshot hands the story a state it has already moved past.
+   - **Only what happened**: Ignore events the message merely anticipates, plans, remembers, imagines, or fears ("she would sit there for another fifteen minutes", "Friday was six days away", "by then she would have to decide"). These are not the current state and must never move the tracker's time, location, or character state forward.
+   - **Follow the movement**: If characters change rooms, leave, or arrive during the message, the tracker reflects where they are at the end — update \`location\`, and add or remove entries in \`charactersPresent\` and \`characters\` accordingly. Someone who arrives in the final lines gets a complete new entry, built from their description or from reasonable assumptions.
+4. **Incremental Time Progression**:
    - Adjust time in small increments, ideally only a few seconds per update, to reflect realistic scene progression. Avoid large jumps unless a significant time skip (e.g., sleep, travel) is explicitly stated.
+   - When the message itself narrates a skip (a shower, a meal, an evening passing), advance the clock to match the end of what actually happened — the snapshot rule above wins over small increments.
    - Format the time as "HH:MM:SS; MM/DD/YYYY (Day Name)".
-4. **Context-Appropriate Times**:
+5. **Context-Appropriate Times**:
    - Ensure that the time aligns with the setting. For example, if the scene takes place in a public venue (e.g., a mall), choose an appropriate time within standard operating hours.
-5. **Location Format**: Avoid unintended reuse of specific locations from previous examples or responses. Provide specific, relevant, and detailed locations based on the context, using the format:
+6. **Location Format**: Avoid unintended reuse of specific locations from previous examples or responses. Provide specific, relevant, and detailed locations based on the context, using the format:
    - **Example**: “Food court, second floor near east wing entrance, Madison Square Mall, Los Angeles, CA”
-6. **Topics Format**: Ensure topics are one- or two-word keywords relevant to the scene to help trigger contextual information. Avoid long phrases.
-7. **Avoid Redundancies**: Use only details provided or logically inferred from context. Do not introduce speculative or unnecessary information.
-8. **Focus and Pause**: Treat each scene update as a standalone, complete entry. Respond with the full tracker every time, even if there are only minor updates.
+   - **Room-level precision**: The most specific part of the location is the room or space the characters are actually in RIGHT NOW. Moving to another room in the same building is a location change — update it. Never leave the location on the room they started in because the building is the same.
+7. **Topics Format**: Ensure topics are one- or two-word keywords relevant to the scene to help trigger contextual information. Avoid long phrases.
+8. **Avoid Redundancies**: Use only details provided or logically inferred from context. Do not introduce speculative or unnecessary information.
+9. **Focus and Pause**: Treat each scene update as a standalone, complete entry. Respond with the full tracker every time, even if there are only minor updates.
 
 ### Important Reminders:
 1. **Recent Messages and Current Tracker**: Before updating, always consider the recent messages to ensure all changes are accurately represented.
@@ -282,12 +287,13 @@ export const IMAGINE_SCHEMA_VALUE: object = {
     },
     location: {
       type: 'string',
-      description: 'Specific scene location with increasing specificity',
+      description:
+        'Where the characters are RIGHT NOW, most specific part first: the exact room or space, then the building, then the city. Moving to another room in the same building is a location change and must be reflected here - never leave this on the room the scene started in.',
     },
     setting: {
       type: 'string',
       description:
-        'Visible surroundings: the room or space, its furniture and surfaces, notable props and objects in view, and the background. Carry forward unchanged while the scene stays in one place so backgrounds stay consistent between images; rewrite only when the characters move somewhere new.',
+        'Visible surroundings of the room named in `location`, and only that room: its walls, floor, furniture and surfaces, notable props and objects in view, and the background. Describe the space the characters are actually standing in, not an adjoining one. While they stay in that room, carry this forward word for word so backgrounds stay identical between images; rewrite it from scratch the moment they move to a different room or space, including another room in the same building.',
     },
     weather: {
       type: 'string',
