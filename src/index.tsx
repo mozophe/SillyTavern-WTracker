@@ -447,25 +447,29 @@ async function initializeGlobalUI() {
 
   // ST keeps the partial message when streaming is stopped and still emits
   // CHARACTER_MESSAGE_RENDERED, so the tracker would run on an aborted reply.
-  // GENERATION_STOPPED is emitted before the stream teardown finishes, so this
-  // flag is always set by the time the render event lands.
+  // Only a real user-facing generation clears the flag: dry runs and quiet
+  // prompts (other extensions) also emit GENERATION_STARTED, and one of those
+  // firing between the stop and the render event would unblock the tracker.
   let generationStopped = false;
-  globalContext.eventSource.on(EventNames.GENERATION_STARTED, () => {
-    generationStopped = false;
+  globalContext.eventSource.on(EventNames.GENERATION_STARTED, (type: string, _options: any, dryRun: boolean) => {
+    if (!dryRun && type !== 'quiet') {
+      generationStopped = false;
+    }
   });
   globalContext.eventSource.on(EventNames.GENERATION_STOPPED, () => {
     generationStopped = true;
   });
 
-  globalContext.eventSource.on(
-    EventNames.CHARACTER_MESSAGE_RENDERED,
-    (messageId: number) =>
-      !generationStopped && incomingTypes.includes(settings.autoMode) && generateTracker(messageId),
-  );
-  globalContext.eventSource.on(
-    EventNames.USER_MESSAGE_RENDERED,
-    (messageId: number) => outgoingTypes.includes(settings.autoMode) && generateTracker(messageId),
-  );
+  const autoTracker = (types: AutoModeOptions[]) => (messageId: number) => {
+    // ST emits render events for messages that were already cut from the chat
+    // (an aborted reply gets deleted), so bail instead of toasting "not found".
+    if (generationStopped || !globalContext.chat[messageId]) return;
+    if (!types.includes(settings.autoMode)) return;
+    generateTracker(messageId);
+  };
+
+  globalContext.eventSource.on(EventNames.CHARACTER_MESSAGE_RENDERED, autoTracker(incomingTypes));
+  globalContext.eventSource.on(EventNames.USER_MESSAGE_RENDERED, autoTracker(outgoingTypes));
   globalContext.eventSource.on(EventNames.CHAT_CHANGED, () => {
     const { saveChat } = globalContext;
     let chatModified = false;
