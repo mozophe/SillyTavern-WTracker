@@ -463,8 +463,16 @@ async function initializeGlobalUI() {
   const autoTracker = (types: AutoModeOptions[]) => (messageId: number) => {
     // ST emits render events for messages that were already cut from the chat
     // (an aborted reply gets deleted), so bail instead of toasting "not found".
-    if (generationStopped || !globalContext.chat[messageId]) return;
-    if (!types.includes(settings.autoMode)) return;
+    if (generationStopped) {
+      return console.debug(`[WTracker] skipped message ${messageId}: generation was stopped`);
+    }
+    if (!globalContext.chat[messageId]) {
+      return console.debug(`[WTracker] skipped message ${messageId}: no longer in the chat`);
+    }
+    if (!types.includes(settings.autoMode)) {
+      return console.debug(`[WTracker] skipped message ${messageId}: auto mode is ${settings.autoMode}`);
+    }
+    console.debug(`[WTracker] auto-generating tracker for message ${messageId}`);
     generateTracker(messageId);
   };
 
