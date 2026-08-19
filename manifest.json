@@ -5,8 +5,8 @@
     "optional": [],
     "js": "dist/index.js",
     "css": "dist/style.css",
-    "author": "bmen25124",
+    "author": "mozophe (fork of bmen25124)",
     "version": "0.1.1",
-    "homePage": "https://github.com/bmen25124/SillyTavern-WTracker",
+    "homePage": "https://github.com/mozophe/SillyTavern-WTracker",
     "generate_interceptor": "wtrackerGenerateInterceptor"
 }
