@@ -47,7 +47,7 @@ function setTrackerPending(messageId: number, pending: boolean) {
 
   const bar = document.createElement('div');
   bar.className = 'wtracker-pending';
-  bar.innerHTML = `<span class="fa-solid fa-truck-moving"></span><span>Generating tracker… (click the WTracker button to cancel)</span>`;
+  bar.innerHTML = `<span class="fa-solid fa-truck-moving"></span><span>Generating tracker…</span>`;
   messageBlock.querySelector('.mes_text')?.before(bar);
 }
 
