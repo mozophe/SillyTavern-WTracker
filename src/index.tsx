@@ -258,13 +258,17 @@ async function generateTracker(id: number) {
       return st_echo('warning', 'Nothing to track: the window holds only hidden messages or attachments.');
     }
 
-    // Extension prompt injections (Summarize, vectors, author's note) reflect the PRESENT
-    // chat state. buildPrompt injects them unconditionally, so for a non-latest target they
-    // leak future events into the prompt. Strip them for older targets, keep for the latest.
+    // Extension prompt injections (Summarize, vectors, memory extensions) reflect the PRESENT
+    // chat state, and buildPrompt injects them unconditionally. For a non-latest target they
+    // leak future events into the prompt. For the latest they are long-range memory, which a
+    // scene tracker does not need — it reads the message window and the previous tracker, and
+    // measurement showed the injected block adds output variance without filling any field
+    // the window leaves empty. So strip them for every target. The author's note is separate
+    // (ignoreAuthorNote below) and is deliberately left alone.
     const isLatest = id === globalContext.chat.length - 1;
     const extPrompts = context.extensionPrompts as Record<string, any>;
     let savedExtPrompts: Record<string, any> | null = null;
-    if (!isLatest && extPrompts) {
+    if (extPrompts) {
       savedExtPrompts = { ...extPrompts };
       Object.keys(extPrompts).forEach((key) => delete extPrompts[key]);
     }
