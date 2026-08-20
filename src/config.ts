@@ -120,6 +120,7 @@ export const DEFAULT_SCHEMA_VALUE: object = {
   title: 'SceneTracker',
   description: 'Schema for tracking roleplay scene details',
   type: 'object',
+  additionalProperties: false,
   properties: {
     time: {
       type: 'string',
@@ -135,6 +136,7 @@ export const DEFAULT_SCHEMA_VALUE: object = {
     },
     topics: {
       type: 'object',
+      additionalProperties: false,
       properties: {
         primaryTopic: {
           type: 'string',
@@ -163,6 +165,7 @@ export const DEFAULT_SCHEMA_VALUE: object = {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           name: {
             type: 'string',
@@ -285,6 +288,7 @@ export const IMAGINE_SCHEMA_VALUE: object = {
   title: 'SceneTracker',
   description: 'Scene tracker tuned to drive image generation: every field must be concrete and visually usable',
   type: 'object',
+  additionalProperties: false,
   properties: {
     time: {
       type: 'string',
@@ -306,6 +310,7 @@ export const IMAGINE_SCHEMA_VALUE: object = {
     },
     topics: {
       type: 'object',
+      additionalProperties: false,
       properties: {
         primaryTopic: {
           type: 'string',
@@ -335,6 +340,7 @@ export const IMAGINE_SCHEMA_VALUE: object = {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           name: {
             type: 'string',

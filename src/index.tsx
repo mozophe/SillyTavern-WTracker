@@ -367,6 +367,16 @@ async function generateTracker(id: number) {
       const result = await makeRequest(messages, {
         json_schema: { name: 'SceneTracker', strict: true, value: chatJsonValue },
       });
+      if (!result?.content) throw new Error('No response content received.');
+      // ST's extractJsonFromData swallows a failed parse and hands back {} rather than the
+      // raw text, so an empty object here means the reply did not parse as JSON — not that
+      // the model replied with nothing. Usually the request was routed to a provider without
+      // structured-output support. The raw text is already discarded and cannot be shown.
+      if (Object.keys(result.content as any).length === 0) {
+        throw new Error(
+          'Structured output returned no fields — the reply likely failed to parse as JSON. Check that the routed provider supports structured outputs, or switch Prompt Engineering Mode to json.',
+        );
+      }
       // @ts-ignore
       response = result?.content;
     } else {
