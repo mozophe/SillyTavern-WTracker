@@ -10,6 +10,7 @@ import { ExtensionSettings, PromptEngineeringMode, EXTENSION_KEY, extensionName 
 import { parseResponse } from './parser.js';
 import { buildChatWindow } from './chat-window.js';
 import { schemaToExample } from './schema-to-example.js';
+import { isOocTurn } from './ooc.js';
 import * as Handlebars from 'handlebars';
 import { POPUP_RESULT, POPUP_TYPE } from 'sillytavern-utils-lib/types/popup';
 
@@ -527,6 +528,11 @@ async function initializeGlobalUI() {
     }
     if (!types.includes(settings.autoMode)) {
       return console.debug(`[WTracker] skipped message ${messageId}: auto mode is ${settings.autoMode}`);
+    }
+    // An OOC aside is a question about the story, not story: tracking it would
+    // record the aside as scene state. The regenerate button still works.
+    if (isOocTurn(globalContext.chat, messageId)) {
+      return console.debug(`[WTracker] skipped message ${messageId}: OOC turn`);
     }
     console.debug(`[WTracker] auto-generating tracker for message ${messageId}`);
     generateTracker(messageId);
