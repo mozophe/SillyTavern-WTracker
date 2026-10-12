@@ -10,7 +10,7 @@ This is a fork of [bmen25124/SillyTavern-WTracker](https://github.com/bmen25124/
 
 ### It's built to feed ST-ComfyUI-Imagine
 
-The tracker ships an extra `Imagine` schema preset for [ST-ComfyUI-Imagine](https://github.com/mozophe/ST-ComfyUI-Imagine). Imagine reads the tracker verbatim and is stateless per image, so anything it has to invent re-rolls on every generation. This preset pins the details that keep a character looking like herself between images: `age`, permanent `appearance`, `accessories`, `bodyState`, `expression`, and a `setting` field that carries the background forward word-for-word until the characters change room.
+The tracker ships an extra `Imagine` schema preset for [ST-ComfyUI-Imagine](https://github.com/mozophe/ST-ComfyUI-Imagine). Imagine reads the tracker verbatim and is stateless per image, so anything it has to invent re-rolls on every generation. This preset pins the details that keep a character looking like herself between images: `age`, `gender`, permanent `appearance`, `accessories`, `bodyState`, `expression`, and a `setting` field that carries the background forward word-for-word until the characters change room.
 
 ### No long-term memory in the tracker prompt
 
@@ -30,6 +30,7 @@ So all extension prompt injections are stripped from the tracker call. Cheaper, 
 
 - New `Allow Hidden Messages` setting — off by default; when on, hidden messages can be tracked and are used as context.
 - Auto mode skips aborted generations (stopped streaming, deleted messages) instead of tracking a half-finished reply, and logs why it fired or skipped.
+- Auto mode skips out-of-character turns: a user message that starts with an OOC marker, and the reply to it, get no tracker — an aside about the story isn't scene state. The marker is `OOC` as the first word, any case, bare or wrapped as `(OOC: …)`, `((OOC: …))`, `[OOC: …]`, `<OOC>` or `**OOC**`; plain brackets and `*actions*` stay in character. It is the same check [TunnelVision](https://github.com/mozophe/TunnelVision) uses. The regenerate button still forces a tracker on an OOC reply.
 - An inline "Generating tracker…" bar appears on the message while it runs — the upstream spinner lives in a hidden menu, so auto-generation looked like nothing was happening.
 - Trackers re-render when "Show more messages" loads older messages.
 - After generation, any name in `charactersPresent` with no matching entry in `characters` is reported so you can regenerate.
