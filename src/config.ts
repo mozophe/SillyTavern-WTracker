@@ -351,6 +351,11 @@ export const IMAGINE_SCHEMA_VALUE: object = {
             description:
               'Age in years as digits (e.g. "27"). Take it from the character description when stated, otherwise infer from context cues (occupation, life stage, family role) and commit. Every character is an adult: never below 18. Once set, carry forward unchanged.',
           },
+          gender: {
+            type: 'string',
+            description:
+              'Gender as it reads visually, e.g. "Woman" or "Man". Take it from the character description or the pronouns used in the story; never infer it from the name alone. Once set, carry forward unchanged.',
+          },
           appearance: {
             type: 'string',
             description:
@@ -398,6 +403,7 @@ export const IMAGINE_SCHEMA_VALUE: object = {
         required: [
           'name',
           'age',
+          'gender',
           'appearance',
           'hair',
           'makeup',
@@ -468,6 +474,10 @@ export const IMAGINE_SCHEMA_HTML = `<div class="wtracker_default_mes_template">
                     <tr>
                         <td>Age:</td>
                         <td>{{character.age}}</td>
+                    </tr>
+                    <tr>
+                        <td>Gender:</td>
+                        <td>{{character.gender}}</td>
                     </tr>
                     <tr>
                         <td>Appearance:</td>
